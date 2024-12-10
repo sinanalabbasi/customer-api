@@ -110,8 +110,8 @@ jobs:
       # Step 4: Apply Kubernetes manifests to deploy the application
       - name: Apply Kubernetes Configurations
         run: |
-          kubectl apply -f deployment.yaml # Apply the deployment configuration
-          kubectl apply -f service.yaml # Apply the service configuration
+          kubectl apply -f k8s/deployment.yaml # Apply the deployment configuration
+          kubectl apply -f k8s/service.yaml # Apply the service configuration
 
       # Step 5: Verify that the pods are running
       - name: Verify Pods
