@@ -1,82 +1,122 @@
-name: Local CI Pipeline with Docker
+# This is the CI/CD pipeline configuration for deploying the Customer API application
+# It includes three jobs:
+# 1. Build and Test Application
+# 2. Build Docker Image
+# 3. Deploy to Kubernetes using Minikube
 
-# Trigger the workflow on pushes to the master branch or on pull requests
+name: CI/CD Pipeline with Kubernetes
+
+# Define when the pipeline should run
 on:
   push:
     branches:
-      - master
-  pull_request:
+      - master # Trigger on pushes to the master branch
+  pull_request: # Trigger on pull requests targeting the master branch
 
 jobs:
   build-and-test:
-    # First job: Build and test the application
+    # This job builds and tests the application using Maven
     name: Build and Test Application
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest # Use the latest Ubuntu runner provided by GitHub
 
     steps:
-      # Step 1: Checkout the code
+      # Step 1: Checkout the source code from the repository
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v3 # Official GitHub Action to pull repository code
 
-      # Step 2: Set up Java
+      # Step 2: Set up Java 17 for the Maven build
       - name: Set up JDK 17
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v3 # Official action to install JDK
         with:
-          java-version: '17'
-          distribution: 'temurin'
+          java-version: '17' # Specify the Java version
+          distribution: 'temurin' # Use the Temurin JDK distribution
 
-      # Step 3: Cache Maven dependencies
+      # Step 3: Cache Maven dependencies to speed up the build
       - name: Cache Maven dependencies
-        uses: actions/cache@v3
+        uses: actions/cache@v3 # GitHub Action to cache dependencies
         with:
-          path: ~/.m2
-          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          path: ~/.m2 # Path to Maven's local repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }} # Cache key based on OS and pom.xml hash
           restore-keys: |
-            ${{ runner.os }}-maven-
+            ${{ runner.os }}-maven- # Fallback key if an exact match is not found
 
       # Step 4: Build the application and run tests
-      - name: Build and Test
-        run: mvn clean package
+      - name: Build Application
+        run: mvn clean package # Run Maven's build command to compile, test, and package the application
 
-      # Step 5: Upload the built JAR file as an artifact
+      # Step 5: Upload the built JAR file as an artifact for the next jobs
       - name: Upload JAR Artifact
-        uses: actions/upload-artifact@v3  # The JAR file is uploaded as an artifact using the actions/upload-artifact action, so it will be available for Docker.
+        uses: actions/upload-artifact@v3 # Action to upload files for later use
         with:
-          name: application-jar
-          path: target/customer-api-*.jar
+          name: application-jar # Name of the artifact
+          path: target/customer-api-*.jar # Path to the JAR file
 
   docker:
-    name: Build and Run Docker Container
+    # This job builds the Docker image for the application
+    name: Build Docker Image
     runs-on: ubuntu-latest
-    needs: build-and-test  # This job depends on the previous job's success
+    needs: build-and-test # This job depends on the successful completion of the build-and-test job
 
     steps:
-      # Step 1: Checkout the code
+      # Step 1: Checkout the source code
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # Step 2: Download the built JAR artifact
+      # Step 2: Download the JAR artifact from the previous job
       - name: Download JAR Artifact
-        uses: actions/download-artifact@v3  # Download the JAR file into the Docker build context from the previous job.
+        uses: actions/download-artifact@v3 # Action to download artifacts
         with:
-          name: application-jar
+          name: application-jar # Name of the artifact to download
 
-      # Step 3: Build the Docker image
+      # Step 3: Build the Docker image for the application
       - name: Build Docker Image
-        run: docker build -t customer-api .
+        run: docker build -t myrepo/customer-api:latest . # Build the Docker image with the tag `customer-api:latest` and with a custom namespace
 
-      # Step 4: Run the Docker container
-      - name: Run Docker Container
+      # Step 4: Save the Docker image to a tar file for transfer to Minikube
+      - name: Save Docker Image
+        run: docker save myrepo/customer-api:latest -o customer-api.tar # Save the Docker image to a file
+
+      # Step 5: Upload the saved Docker image as an artifact for the next job
+      - name: Upload Docker Image Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: docker-image # Name of the artifact
+          path: customer-api.tar # Path to the tar file
+
+  kubernetes:
+    # This job deploys the application to a Minikube Kubernetes cluster
+    name: Deploy to Kubernetes
+    runs-on: ubuntu-latest
+    needs: docker # This job depends on the successful completion of the docker job
+
+    steps:
+      # Step 1: Checkout the source code
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Step 2: Download the Docker image artifact from the previous job
+      - name: Download Docker Image Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: docker-image # Name of the artifact to download
+
+      # Step 3: Start Minikube and set up Docker environment
+      - name: Start Minikube and Load Docker Image
         run: |
-          docker run -d -p 8080:8080 --name customer-api-container customer-api
-          sleep 10  # Wait for the container to initialize
+          minikube start --driver=docker # Start Minikube with Docker as the driver
+          eval $(minikube docker-env) # Point Docker CLI to Minikube's Docker daemon
+          docker load -i customer-api.tar # Load the saved Docker image into Minikube
 
-      # Step 5: Validate the container
-      - name: Validate Container
-        run: curl -f http://localhost:8080/actuator/health || exit 1
-
-      # Step 6: Stop and clean up the Docker container
-      - name: Cleanup Docker Container
+      # Step 4: Apply Kubernetes manifests to deploy the application
+      - name: Apply Kubernetes Configurations
         run: |
-          docker stop customer-api-container
-          docker rm customer-api-container
+          kubectl apply -f deployment.yaml # Apply the deployment configuration
+          kubectl apply -f service.yaml # Apply the service configuration
+
+      # Step 5: Verify that the pods are running
+      - name: Verify Pods
+        run: kubectl get pods # List all running pods in the cluster
+
+      # Step 6: Verify that the service is available
+      - name: Verify Services
+        run: kubectl get service # List all services in the cluster

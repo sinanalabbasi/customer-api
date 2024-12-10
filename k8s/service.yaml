@@ -1,0 +1,13 @@
+# Kubernetes Service for Customer API
+apiVersion: v1       # Specifies the Kubernetes API version
+kind: Service        # Resource type is Service
+metadata:
+  name: customer-api-service # Unique name for this service
+spec:
+  selector:          # Targets pods with this label
+    app: customer-api
+  ports:
+    - protocol: TCP   # Communication protocol
+      port: 80        # Port exposed to external clients
+      targetPort: 8080 # Port exposed by the container
+  type: NodePort      # Service type exposes the application via a node's IP (NodePort is commonly used for local development.)

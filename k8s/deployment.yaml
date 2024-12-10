@@ -1,0 +1,24 @@
+# Kubernetes Deployment for Customer API
+apiVersion: apps/v1 # Specifies the Kubernetes API version
+kind: Deployment    # Resource type is Deployment
+metadata:
+  name: customer-api-deployment # Unique name for this deployment
+  labels:                       # Metadata labels to identify the deployment
+    app: customer-api
+
+spec:
+  replicas: 2 # Number of application instances (pods) to run
+  selector:   # Criteria for selecting pods managed by this deployment
+    matchLabels:
+      app: customer-api # Matches pods with this label
+  template:   # Template for creating pods
+    metadata:
+      labels: # Metadata labels for the pods
+        app: customer-api
+    spec:
+      containers:
+        - name: customer-api # Name of the container
+          image: myrepo/customer-api:latest # Docker image to use with a custom namespace and with the tag
+          imagePullPolicy: IfNotPresent # Prevents pulling the image from Docker Hub
+          ports:
+            - containerPort: 8080 # Port exposed by the container
