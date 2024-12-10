@@ -3,6 +3,8 @@ package com.example.customerapi.service;
 import com.example.customerapi.exception.CustomerNotFoundException;
 import com.example.customerapi.model.Customer;
 import com.example.customerapi.repository.CustomerRepository;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
@@ -25,9 +27,18 @@ class CustomerServiceTest {
     @Mock
     private CustomerRepository repository;
 
+    @Mock
+    private MeterRegistry meterRegistry;
+
+    @Mock
+    private Counter counter;
+
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
+
+        // Mock behavior of MeterRegistry
+        when(meterRegistry.counter("customer.creation.requests")).thenReturn(counter);
     }
 
     @Test
@@ -39,6 +50,7 @@ class CustomerServiceTest {
 
         assertNotNull(createdCustomer);
         verify(repository, times(1)).save(customer);
+        verify(meterRegistry, times(1)).counter("customer.creation.requests");
     }
 
     @Test

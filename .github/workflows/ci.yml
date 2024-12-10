@@ -1,25 +1,24 @@
-name: CI Pipeline
+name: Local CI Pipeline with Docker
 
-# Trigger the workflow on pushes to the main branch or on pull requests
+# Trigger the workflow on pushes to the master branch or on pull requests
 on:
   push:
     branches:
       - master
   pull_request:
 
-# Define jobs for the workflow
 jobs:
-  build:
-    # Name of the job
-    name: Build and Test
-
-    # The virtual environment to use (Ubuntu)
+  build-and-test:
+    # First job: Build and test the application
+    name: Build and Test Application
     runs-on: ubuntu-latest
 
     steps:
       # Step 1: Checkout the code
       - name: Checkout code
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0 # Fetch all history for accurate build information
 
       # Step 2: Set up Java
       - name: Set up JDK 17
@@ -29,7 +28,7 @@ jobs:
           distribution: 'temurin'
 
       # Step 3: Cache Maven dependencies
-      - name: Cache Maven packages
+      - name: Cache Maven dependencies
         uses: actions/cache@v3
         with:
           path: ~/.m2
@@ -37,14 +36,37 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-maven-
 
-      # Step 4: Build the project and run tests
+      # Step 4: Build the application and run tests
       - name: Build and Test
-        run: mvn clean test
+        run: mvn clean package
 
-      # Step 5: Upload Test Results
-      - name: Upload Test Results
-        if: always()
-        uses: actions/upload-artifact@v3
-        with:
-          name: test-results
-          path: target/surefire-reports/
+  docker:
+    # Second job: Build the Docker image and run the container locally
+    name: Build and Run Docker Container
+    runs-on: ubuntu-latest
+    needs: build-and-test # This job depends on the previous job's success
+
+    steps:
+      # Step 1: Checkout the code
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Step 2: Build the Docker image
+      - name: Build Docker Image
+        run: docker build -t customer-api .
+
+      # Step 3: Run the Docker container
+      - name: Run Docker Container
+        run: |
+          docker run -d -p 8080:8080 --name customer-api-container customer-api
+          sleep 10 # Wait for the container to initialize
+
+      # Step 4: Validate the container is running
+      - name: Validate Container
+        run: curl -f http://localhost:8080/actuator/health || exit 1
+
+      # Step 5: Stop and remove the Docker container
+      - name: Cleanup Docker Container
+        run: |
+          docker stop customer-api-container
+          docker rm customer-api-container
