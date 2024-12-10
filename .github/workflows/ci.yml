@@ -49,7 +49,7 @@ jobs:
         uses: actions/upload-artifact@v3 # Action to upload files for later use
         with:
           name: application-jar # Name of the artifact
-          path: target/customer-api-*.jar # Path to the JAR file
+          path: customer-api-*.jar # Path to the JAR file
 
   docker:
     # This job builds the Docker image for the application
