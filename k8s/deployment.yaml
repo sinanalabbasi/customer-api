@@ -10,7 +10,7 @@ spec:
   replicas: 2 # Number of application instances (pods) to run
   selector:   # Criteria for selecting pods managed by this deployment
     matchLabels:
-      app: customer-api # Matches pods with this label
+      app: customer-api # Match pods with this label
   template:   # Template for creating pods
     metadata:
       labels: # Metadata labels for the pods
@@ -19,6 +19,6 @@ spec:
       containers:
         - name: customer-api # Name of the container
           image: myrepo/customer-api:latest # Docker image to use with a custom namespace and with the tag
-          imagePullPolicy: IfNotPresent # Prevents pulling the image from Docker Hub
+          imagePullPolicy: Never # Prevents pulling the image from a registry like (Docker Hub) but takes it from the local
           ports:
             - containerPort: 8080 # Port exposed by the container
