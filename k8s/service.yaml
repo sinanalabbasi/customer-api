@@ -8,6 +8,6 @@ spec:
     app: customer-api
   ports:
     - protocol: TCP   # Communication protocol
-      port: 8080        # Port exposed to external clients
+      port: 8080      # Port exposed to external clients
       targetPort: 8080 # Port exposed by the container
   type: NodePort      # Service type exposes the application via a node's IP (NodePort is commonly used for local development.)

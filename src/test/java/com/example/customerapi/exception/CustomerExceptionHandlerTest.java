@@ -77,13 +77,13 @@ class CustomerExceptionHandlerTest {
     @Test
     void testHandleGenericException() {
         // Arrange
-        String errorMessage = "Unexpected error occurred";
+        String errorMessage = "An unexpected error occurred.";
         Exception exception = new Exception(errorMessage);
 
         // Act
         ResponseEntity<String> response = exceptionHandler.handleGenericException(exception);
 
         // Assert
-        assertEquals("An unexpected error occurred.", response.getBody());
+        assertEquals(errorMessage, response.getBody());
     }
 }
