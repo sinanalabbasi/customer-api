@@ -68,15 +68,21 @@ jobs:
         with:
           name: application-jar # Name of the artifact to download
 
-      # Step 3: Build the Docker image for the application
+      # Step 3: Creates the target/ directory if it doesn't exist and move the downloaded JAR artifact into the target/ directory to be ready for the Dockerfile COPY command
+      - name: Prepare Docker Build Context
+        run: |
+          mkdir -p target
+          mv customer-api-*.jar target/
+
+      # Step 4: Build the Docker image for the application
       - name: Build Docker Image
         run: docker build -t myrepo/customer-api:latest . # Build the Docker image with the tag `customer-api:latest` and with a custom namespace
 
-      # Step 4: Save the Docker image to a tar file for transfer to Minikube
+      # Step 5: Save the Docker image to a tar file for transfer to Minikube
       - name: Save Docker Image
         run: docker save myrepo/customer-api:latest -o customer-api.tar # Save the Docker image to a file
 
-      # Step 5: Upload the saved Docker image as an artifact for the next job
+      # Step 6: Upload the saved Docker image as an artifact for the next job
       - name: Upload Docker Image Artifact
         uses: actions/upload-artifact@v3
         with:
